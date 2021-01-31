@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(here)
 library(janitor)
+library(naniar)
 ```
 
 
@@ -23,12 +24,58 @@ palmetto <- read_csv(here("data", "palmetto.csv"), col_types = cols(.default = '
     species %in% 1 ~ "Serenoa repens",
     species %in% 2 ~ "Sabal etonia"
   ))
+
+# Palmetto subset
+palmetto_sub <- palmetto %>% 
+  select(species, height, length, width, green_lvs) %>% 
+  mutate(length = as.numeric(length),
+         width = as.numeric(width),
+         green_lvs = as.numeric(green_lvs)) %>% 
+  drop_na()
+
+# Exploring NAs
+gg_miss_upset(palmetto_sub)
 ```
 
 
 
 ## Data Viz
 
+```{r}
+# First plot
+ggplot(palmetto_sub, aes(x = species, y = height)) +
+  geom_jitter(color = "darkgreen",
+              alpha = 0.3) +
+  geom_boxplot(aes(fill = species),
+               show.legend = F,
+               alpha = 0.8) +
+  labs(x = "Species",
+       y = "Height") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
+        axis.text = element_text(size = 10, color = "gray18"),
+        axis.text.x = element_text(face = "italic"))
+
+# Second plot
+ggplot(palmetto_sub, aes(x = green_lvs, y = width)) +
+  geom_point(aes(color = species),
+             show.legend = F) +
+  labs(x = "Number of leaves",
+       y = "Width") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
+        panel.grid = element_blank())
+
+# Third plot
+ggplot(palmetto_sub, aes(x = height, y = length)) +
+  geom_point(aes(color = species),
+             show.legend = F) +
+  labs(x = "Height",
+       y = "Length") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 12, color = "black"),
+        axis.text = element_text(size = 10, color = "gray18"))
+```
 
 
 
@@ -56,7 +103,7 @@ palmetto <- read_csv(here("data", "palmetto.csv"), col_types = cols(.default = '
 
 
 
-
+## Model fit
 
 
 
