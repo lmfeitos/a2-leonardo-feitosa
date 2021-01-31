@@ -3,8 +3,65 @@ title: "a2_task2_leonardo_feitosa"
 author: "Leonardo Feitosa"
 date: "31/01/2021"
 output: html_document
+  code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
 ```
+
+
+## Read in the data
+
+```{r}
+palmetto <- read_csv(here("data", "palmetto.csv"), col_types = cols(.default = 'c')) %>% 
+  mutate(height = as.numeric(height)) %>% 
+  mutate(species = case_when(
+    species %in% 1 ~ "Serenoa repens",
+    species %in% 2 ~ "Sabal etonia"
+  ))
+```
+
+
+
+## Data Viz
+
+
+
+
+
+
+
+
+
+
+## Binary logistic regression
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
