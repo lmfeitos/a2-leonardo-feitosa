@@ -12,6 +12,9 @@ library(tidyverse)
 library(here)
 library(janitor)
 library(naniar)
+library(kableExtra)
+library(broom)
+library(GGally)
 ```
 
 
@@ -42,13 +45,19 @@ gg_miss_upset(palmetto_sub)
 ## Data Viz
 
 ```{r}
+# Exploratory plots
+
+ggpairs(palmetto_sub, aes(color = species))
+
 # First plot
 ggplot(palmetto_sub, aes(x = species, y = height)) +
-  geom_jitter(color = "darkgreen",
-              alpha = 0.3) +
+  geom_jitter(color = "goldenrod4",
+              alpha = 0.3,
+              width = 0.35) +
   geom_boxplot(aes(fill = species),
                show.legend = F,
-               alpha = 0.8) +
+               alpha = 0.9) +
+  scale_fill_brewer(palette = "Set1") +
   labs(x = "Species",
        y = "Height") +
   theme_classic() +
@@ -57,29 +66,26 @@ ggplot(palmetto_sub, aes(x = species, y = height)) +
         axis.text.x = element_text(face = "italic"))
 
 # Second plot
-ggplot(palmetto_sub, aes(x = green_lvs, y = width)) +
+ggplot(palmetto_sub, aes(x = height, y = width)) +
   geom_point(aes(color = species),
              show.legend = F) +
-  labs(x = "Number of leaves",
+  labs(x = "Height",
        y = "Width") +
   theme_bw() +
   theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
         panel.grid = element_blank())
 
 # Third plot
-ggplot(palmetto_sub, aes(x = height, y = length)) +
+ggplot(palmetto_sub, aes(x = height, y = green_lvs)) +
   geom_point(aes(color = species),
              show.legend = F) +
   labs(x = "Height",
        y = "Length") +
   theme_bw() +
-  theme(axis.title = element_text(size = 12, color = "black"),
-        axis.text = element_text(size = 10, color = "gray18"))
+  theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
+        axis.text = element_text(size = 10, color = "gray18"),
+        panel.grid = element_blank())
 ```
-
-
-
-
 
 
 
@@ -87,8 +93,27 @@ ggplot(palmetto_sub, aes(x = height, y = length)) +
 
 ## Binary logistic regression
 
+```{r}
+# Binary logistic regression
+palmetto_binary <- palmetto_sub %>% 
+  mutate(species_binary = case_when(
+    species %in% c("Serenoa repens") ~ 0,
+    species %in% c("Sabal etonia") ~ 1
+  ))
 
+palmetto_blr <- glm(species_binary ~ length + height + width + green_lvs, data = palmetto_binary, family = "binomial")
 
+palmetto_blr
+
+# Model outputs
+summary(palmetto_blr)
+
+palmetto_blr_tidy <- broom::tidy(palmetto_blr)
+```
+
+```{r, results = "asis"}
+# Finalized table
+```
 
 
 
