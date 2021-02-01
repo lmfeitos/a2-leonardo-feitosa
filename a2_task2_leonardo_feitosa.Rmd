@@ -21,7 +21,8 @@ library(GGally)
 ## Read in the data
 
 ```{r}
-palmetto <- read_csv(here("data", "palmetto.csv"), col_types = cols(.default = 'c')) %>% 
+palmetto <- read_csv(here("data", "palmetto.csv"), 
+                     col_types = cols(.default = 'c')) %>% 
   mutate(height = as.numeric(height)) %>% 
   mutate(species = case_when(
     species %in% 1 ~ "Serenoa repens",
@@ -109,10 +110,18 @@ palmetto_blr
 summary(palmetto_blr)
 
 palmetto_blr_tidy <- broom::tidy(palmetto_blr)
+
+# Fitted model
+palmetto_blr_fitted <- palmetto_blr %>% 
+  broom::augment(type.predict = "response")
 ```
 
-```{r, results = "asis"}
-# Finalized table
+```{r}
+# Data viz for fitted model
+ggplot(data = palmetto_blr_fitted, aes(x = length, y = .fitted)) +
+  geom_point(aes(color = species_binary)) +
+  geom_smooth(aes(color = species_binary), se = FALSE) +
+  theme_bw()
 ```
 
 
