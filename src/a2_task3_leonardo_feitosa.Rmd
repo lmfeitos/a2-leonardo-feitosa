@@ -1,0 +1,74 @@
+---
+title: "a2_task3_leonardo_feitosa"
+author: "Leonardo Feitosa"
+date: "01/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytuesdayR)
+library(naniar)
+```
+
+## Read in the data
+```{r}
+tuesdata <- tidytuesdayR::tt_load(2021, week = 5)
+
+plastics <- tuesdata$plastics
+```
+
+## Data wrangling
+
+```{r}
+plastics_tidy <- plastics %>% 
+  pivot_longer(cols = empty:pvc,
+               names_to = "recycling_code",
+               values_to = "counts") %>% 
+  drop_na()
+```
+
+## Data viz
+
+```{r}
+ggplot(data = plastics_tidy, aes(x = parent_company, y = country)) +
+  geom_point()
+```
+
+
+
+
+
+```{r, warning = FALSE}
+plastics_filter <- plastics_tidy %>% 
+  filter(country %in% c("Brazil"))
+
+# New ggplot theme
+
+theme_coral <- function() {
+  theme(
+    panel.border = element_rect(color = "coral", fill = NA, linetype = "solid"),
+    panel.background = element_rect(fill = "lightcoral"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_line(colour = "coral2",
+                                      linetype = 2,
+                                      size = 1),
+    panel.grid.major.y = element_line(colour = "coral2",
+                                      linetype = 2,
+                                      size = 1),
+    panel.grid.minor.y = element_blank(),
+    axis.text = element_text(colour = "lightcoral", face = "bold",
+                             family = "Times New Roman"),
+    axis.title = element_text(colour = "lightcoral", 
+                              family = "Times New Roman"),
+    axis.ticks = element_blank(),
+    legend.position = "top"
+  )
+}
+
+ggplot(data = plastics_filter, aes(x = recycling_code, y = counts)) +
+  geom_point(aes(color = country)) +
+  theme_coral()
+```
+
