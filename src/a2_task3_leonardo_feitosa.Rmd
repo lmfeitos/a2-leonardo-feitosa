@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(tidytuesdayR)
 library(naniar)
+library(ggalluvial)
+library(gganimate)
 ```
 
 ## Read in the data
@@ -25,50 +27,142 @@ plastics <- tuesdata$plastics
 plastics_tidy <- plastics %>% 
   pivot_longer(cols = empty:pvc,
                names_to = "recycling_code",
-               values_to = "counts") %>% 
+               values_to = "abundance") %>% 
+  mutate(year = as.character(year)) %>% 
   drop_na()
+
+plastics_count <- plastics_tidy %>%
+  mutate(country = fct_reorder(country, abundance)) %>% 
+  count(country, recycling_code, year, wt = abundance) %>% 
+  slice_max(country, n = 20) %>% 
+  slice(-(1:2)) %>% 
+  as.data.frame()
 ```
+
+## Using the function `fct_recode()` from `forcats`
+
+```{r}
+plastics_fct <- plastics_tidy %>% 
+  fct_recode(country, USA = "United States of America")
+```
+
+
+
+
 
 ## Data viz
 
-```{r}
-ggplot(data = plastics_tidy, aes(x = parent_company, y = country)) +
-  geom_point()
-```
-
-
-
-
-
 ```{r, warning = FALSE}
-plastics_filter <- plastics_tidy %>% 
-  filter(country %in% c("Brazil"))
+plastics_america <- plastics_tidy %>% 
+  filter(country %in% c("Brazil",
+                        "Argentina",
+                        "Peru",
+                        "Colombia",
+                        "Chile",
+                        "Ecuador",
+                        "Mexico",
+                        "United States of America",
+                        "Canada",
+                        "El Salvador",
+                        "Honduras")) %>% 
+  select(country, year, recycling_code, abundance) %>% 
+  mutate(america = case_when(
+    country %in% c("Brazil",
+                        "Argentina",
+                        "Peru",
+                        "Colombia",
+                        "Chile",
+                        "Ecuador") ~ "South America",
+    country %in% c("United States of America",
+                   "Canada") ~ "North America",
+    country %in% c("Mexico",
+                   "Honduras",
+                   "El Salvador") ~ "Central America"
+  ))
 
 # New ggplot theme
 
-theme_coral <- function() {
+theme_cyan <- function() {
   theme(
-    panel.border = element_rect(color = "coral", fill = NA, linetype = "solid"),
-    panel.background = element_rect(fill = "lightcoral"),
+    panel.border = element_rect(color = "cyan4", fill = NA, linetype = "solid"),
+    panel.background = element_rect(fill = "cyan4"),
     panel.grid.minor.x = element_blank(),
-    panel.grid.major.x = element_line(colour = "coral2",
+    panel.grid.major.x = element_line(colour = "darkred",
                                       linetype = 2,
                                       size = 1),
-    panel.grid.major.y = element_line(colour = "coral2",
+    panel.grid.major.y = element_line(colour = "darkred",
                                       linetype = 2,
                                       size = 1),
     panel.grid.minor.y = element_blank(),
-    axis.text = element_text(colour = "lightcoral", face = "bold",
-                             family = "Times New Roman"),
-    axis.title = element_text(colour = "lightcoral", 
-                              family = "Times New Roman"),
+    axis.text = element_text(colour = "lightcoral", face = "bold"),
+    axis.title = element_text(colour = "lightcoral"),
     axis.ticks = element_blank(),
     legend.position = "top"
   )
 }
-
-ggplot(data = plastics_filter, aes(x = recycling_code, y = counts)) +
-  geom_point(aes(color = country)) +
-  theme_coral()
 ```
+
+
+## Working on the `ggalluvial` package
+
+```{r}
+is_alluvia_form(plastics_count, axes = 1:3, silent = T)
+
+ggplot(data = plastics_count, aes(y = n,
+                                  axis1 = country,
+                                  axis2 = recycling_code)) +
+  geom_alluvium(aes(fill = year), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "gray18", color = "white") +
+  geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("country", "recycling_code"), 
+                   expand = c(.05, .02)) +
+  scale_fill_brewer(type = "qual", palette = "Set1") +
+  labs(y = "Counts",
+       title = "Types of plastic for the top producing countries") +
+  theme_cyan()
+```
+
+
+
+## gganimate()
+
+```{r}
+p <- ggplot(data = plastics_filter, aes(x = country, y = sum)) +
+  geom_point() +
+  transition_states(year,
+                    transition_length = 2,
+                    state_length = 1)
+  
+p
+anim <- p +
+  transition_states(year,
+                    transition_length = 2,
+                    state_length = 1) +
+  theme_bw()
+
+anim
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
