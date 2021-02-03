@@ -3,7 +3,6 @@ title: "a2_task2_leonardo_feitosa"
 author: "Leonardo Feitosa"
 date: "31/01/2021"
 output: html_document
-  code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +11,7 @@ library(tidyverse)
 library(here)
 library(janitor)
 library(naniar)
-library(kableExtra)
+library(stargazer)
 library(broom)
 library(GGally)
 ```
@@ -24,21 +23,27 @@ library(GGally)
 palmetto <- read_csv(here("data", "palmetto.csv"), 
                      col_types = cols(.default = 'c')) %>% 
   mutate(height = as.numeric(height)) %>% 
-  mutate(species = case_when(
+  mutate(species_full = case_when(
     species %in% 1 ~ "Serenoa repens",
     species %in% 2 ~ "Sabal etonia"
-  ))
+  )) %>% 
+  relocate(species_full, .after = species)
 
 # Palmetto subset
 palmetto_sub <- palmetto %>% 
-  select(species, height, length, width, green_lvs) %>% 
+  select(species_full, species, height, length, width, green_lvs) %>% 
   mutate(length = as.numeric(length),
          width = as.numeric(width),
-         green_lvs = as.numeric(green_lvs)) %>% 
+         green_lvs = as.numeric(green_lvs),
+         species = as.numeric(species)) %>% 
+  mutate(species = case_when(
+    species %in% 1 ~ 0,
+    species %in% 2 ~ 1
+  )) %>% 
   drop_na()
 
-# Exploring NAs
-gg_miss_upset(palmetto_sub)
+# Checking which is which
+levels(palmetto_sub$species_full)
 ```
 
 
@@ -48,14 +53,14 @@ gg_miss_upset(palmetto_sub)
 ```{r}
 # Exploratory plots
 
-ggpairs(palmetto_sub, aes(color = species))
+ggpairs(palmetto_sub, aes(color = species_full))
 
 # First plot
-ggplot(palmetto_sub, aes(x = species, y = height)) +
+ggplot(palmetto_sub, aes(x = species_full, y = height)) +
   geom_jitter(color = "goldenrod4",
               alpha = 0.3,
               width = 0.35) +
-  geom_boxplot(aes(fill = species),
+  geom_boxplot(aes(fill = species_full),
                show.legend = F,
                alpha = 0.9) +
   scale_fill_brewer(palette = "Set1") +
@@ -68,7 +73,7 @@ ggplot(palmetto_sub, aes(x = species, y = height)) +
 
 # Second plot
 ggplot(palmetto_sub, aes(x = height, y = width)) +
-  geom_point(aes(color = species),
+  geom_point(aes(color = species_full),
              show.legend = F) +
   labs(x = "Height",
        y = "Width") +
@@ -78,7 +83,7 @@ ggplot(palmetto_sub, aes(x = height, y = width)) +
 
 # Third plot
 ggplot(palmetto_sub, aes(x = height, y = green_lvs)) +
-  geom_point(aes(color = species),
+  geom_point(aes(color = species_full),
              show.legend = F) +
   labs(x = "Height",
        y = "Length") +
@@ -95,14 +100,7 @@ ggplot(palmetto_sub, aes(x = height, y = green_lvs)) +
 ## Binary logistic regression
 
 ```{r}
-# Binary logistic regression
-palmetto_binary <- palmetto_sub %>% 
-  mutate(species_binary = case_when(
-    species %in% c("Serenoa repens") ~ 0,
-    species %in% c("Sabal etonia") ~ 1
-  ))
-
-palmetto_blr <- glm(species_binary ~ length + height + width + green_lvs, data = palmetto_binary, family = "binomial")
+palmetto_blr <- glm(species ~ length + height + width + green_lvs, data = palmetto_sub, family = "binomial")
 
 palmetto_blr
 
@@ -110,34 +108,35 @@ palmetto_blr
 summary(palmetto_blr)
 
 palmetto_blr_tidy <- broom::tidy(palmetto_blr)
+```
 
+```{r, results = 'asis', echo = FALSE}
+# Finalized table
+stargazer(palmetto_blr, type = "html")
+```
+
+
+
+
+```{r}
 # Fitted model
 palmetto_blr_fitted <- palmetto_blr %>% 
   broom::augment(type.predict = "response")
-```
 
-```{r}
+
 # Data viz for fitted model
 ggplot(data = palmetto_blr_fitted, aes(x = length, y = .fitted)) +
-  geom_point(aes(color = species_binary)) +
-  geom_smooth(aes(color = species_binary), se = FALSE) +
+  geom_point(aes(color = species)) +
+  geom_smooth(aes(color = species), se = FALSE) +
   theme_bw()
 ```
 
+```{r}
+palmetto_outcome <- palmetto_blr_fitted %>% 
+  predict(data.frame = (species))
+  mutate_if(.fitted >= 0.5)
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-## Model fit
 
 
 
