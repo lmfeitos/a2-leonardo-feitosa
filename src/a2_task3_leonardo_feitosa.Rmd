@@ -11,8 +11,10 @@ library(tidyverse)
 library(tidytuesdayR)
 library(naniar)
 library(ggalluvial)
+library(gganimate)
 library(magick)
 library(here)
+library(av)
 library(showtext)
 ```
 
@@ -31,30 +33,10 @@ plastics_tidy <- plastics %>%
                names_to = "recycling_code",
                values_to = "abundance") %>% 
   mutate(year = as.character(year)) %>% 
+  recode(country, USA = c("United States of America"))
   drop_na()
-
-plastics_count <- plastics_tidy %>%
-  mutate(country = fct_reorder(country, abundance)) %>% 
-  count(country, recycling_code, year, wt = abundance) %>% 
-  slice_max(country, n = 20) %>% 
-  slice(-(1:2)) %>%
-  filter(recycling_code %in% c("o",
-                               "pc",
-                               "pet",
-                               "pp")) %>% 
-  mutate(country = case_when(
-    country %in% c("United States of America") ~ "USA",
-    country %in% c("Vietnam") ~ "Vietnam"
-  )) %>% 
-  as.data.frame()
 ```
 
-## Using the function `fct_recode()` from `forcats`
-
-```{r}
-plastics_fct <- plastics_tidy %>% 
-  fct_recode(country, USA = "United States of America")
-```
 
 # New ggplot theme
 
@@ -70,34 +52,63 @@ theme_slate <- function() {
     panel.grid.minor.x = element_blank(),
     panel.grid.major.x = element_line(colour = "darkslateblue",
                                       linetype = 2,
-                                      size = 1),
+                                      size = 0.1),
     panel.grid.major.y = element_line(colour = "darkslateblue",
                                       linetype = 2,
-                                      size = 1),
+                                      size = 0.1),
     panel.grid.minor.y = element_blank(),
-    plot.title = element_text(family = "Roboto", face = "bold", size = 15),
-    axis.text = element_text(colour = "black", face = "bold"),
-    axis.title = element_text(colour = "black"),
-    axis.ticks = element_blank(),
-    legend.position = "top"
+    plot.title = element_text(face = "bold", size = 15),
+    axis.text = element_text(colour = "black"),
+    axis.title = element_text(colour = "black", face = "bold"),
+    axis.ticks = element_blank()
   )
 }
 ```
 
 
-## Reading and editing an image with `magick`
+## gganimate()
 
 ```{r}
-coke <- image_read(here("data", "coke.png"))
+p <- ggplot(data = plastics_america_count, aes(x = n, y = country)) +
+  geom_col(aes(fill = year),
+             size = 19,
+           show.legend = F) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(x = "Number of plastic bottles",
+       y = "Country",
+       fill = "Year",
+       title = "Pepsi and unbranded plastic bottles through the Americas",
+       subtitle = "Year {previous_state}",
+       caption = "Data source: Break Free From Plastic by Sarah Sauve") +
+  scale_y_discrete(labels = c("ARG", 
+                              "BRA", 
+                              "CAN", 
+                              "CHI", 
+                              "COL", 
+                              "ECU",
+                              "ESA",
+                              "MEX",
+                              "PER",
+                              "USA")) +
+  theme_slate() +
+  theme(panel.grid = element_blank(),
+        axis.title = element_text(size = 12, face = "bold", color = "black"),
+        axis.text = element_text(size = 10, color = "gray18")) +
+  transition_states(year,
+                    transition_length = 2,
+                    state_length = 1) +
+  ease_aes('cubic-in-out') 
 
-print(coke)
+animate(p,
+        renderer = av_renderer())
 
-image_trim(coke)
-image_resize(coke, "600")
+anim_save("pepsi.gif", p)
+
+magick::image_write(p, path = here("fig", "task3.gif"))
 ```
 
 
-## Data viz
+## Sankey diagram!
 
 ```{r, warning = FALSE}
 plastics_america <- plastics_tidy %>% 
@@ -151,71 +162,29 @@ is_alluvia_form(plastics_america_count, axes = 1:3, silent = T)
 
 
 ggplot(data = plastics_america_count, aes(y = n,
-                                          axis1 = country,
-                                          axis2 = recycling_code,
-                                          axis3 = america)) +
+                                          axis1 = parent_company,
+                                          axis2 = country,
+                                          axis3 = recycling_code,
+                                          axis4 = america)) +
   geom_alluvium(aes(fill = year), 
                 width = 1/12,
                 reverse = FALSE) +
   geom_stratum(width = 1/12,
                fill = "white",
-               color = "goldenrod4") +
+               color = "black") +
   geom_label(stat = "stratum", 
              aes(label = after_stat(stratum))) +
-  geom_flow() +
   scale_x_discrete(limits = c("country", 
                               "recycling_code"), 
                    expand = c(.05, .02)) +
   labs(y = "Counts",
        title = "Title",
        fill = "Year") +
+  coord_flip() +
   theme_slate()
 
 ggsave(here("fig", "alluvial.png"), width = 12, height = 10)
 
-alluvial <- image_read(here("fig", "alluvial.png"))
-
-new_plot <- alluvial %>% 
-  image_composite(bottle, offset = "+3900+2500")
-
-image_scale(new_plot, "600")
-
-ggsave(here("fig", "alluvial_new.png"), width = 12, height = 10)
-
-
-# Lodes
-
-plas_ame_ct_lode <- to_lodes_form(plastics_america_count,
-                                  axes = 1:2,
-                                  id = "continent")
-
-
-head(plas_ame_ct_lode, n = 10)
-
-is_lodes_form(plas_ame_ct_lode, key = , value = stratum, id = continent, silent = TRUE)
-
-```
-
-
-
-
-## gganimate()
-
-```{r}
-p <- ggplot(data = plastics_filter, aes(x = country, y = sum)) +
-  geom_point() +
-  transition_states(year,
-                    transition_length = 2,
-                    state_length = 1)
-  
-p
-anim <- p +
-  transition_states(year,
-                    transition_length = 2,
-                    state_length = 1) +
-  theme_bw()
-
-anim
 ```
 
 
