@@ -22,28 +22,20 @@ library(GGally)
 ```{r}
 palmetto <- read_csv(here("data", "palmetto.csv"), 
                      col_types = cols(.default = 'c')) %>% 
-  mutate(height = as.numeric(height)) %>% 
+  mutate(across(.cols = height:green_lvs, as.numeric)) %>% 
   mutate(species_full = case_when(
-    species %in% 1 ~ "Serenoa repens",
-    species %in% 2 ~ "Sabal etonia"
+    species %in% 1 ~ "Serenoa",
+    species %in% 2 ~ "Sabal"
   )) %>% 
   relocate(species_full, .after = species)
 
 # Palmetto subset
 palmetto_sub <- palmetto %>% 
   select(species_full, species, height, length, width, green_lvs) %>% 
-  mutate(length = as.numeric(length),
-         width = as.numeric(width),
-         green_lvs = as.numeric(green_lvs),
-         species = as.numeric(species)) %>% 
-  mutate(species = case_when(
-    species %in% 1 ~ 0,
-    species %in% 2 ~ 1
-  )) %>% 
   drop_na()
 
 # Checking which is which
-levels(palmetto_sub$species_full)
+levels(palmetto$species_full)
 ```
 
 
@@ -100,7 +92,7 @@ ggplot(palmetto_sub, aes(x = height, y = green_lvs)) +
 ## Binary logistic regression
 
 ```{r}
-palmetto_blr <- glm(species ~ length + height + width + green_lvs, data = palmetto_sub, family = "binomial")
+palmetto_blr <- glm(species_full ~ length + height + width + green_lvs, data = palmetto_sub, family = "binomial")
 
 palmetto_blr
 
