@@ -1,25 +1,33 @@
 ---
-title: "a2_task2_leonardo_feitosa"
+title: "Assignment 2 - Task 2"
 author: "Leonardo Feitosa"
-date: "31/01/2021"
-output: html_document
+date: "04/02/2021"
+output: 
+  html_document:
+    theme: journal
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
 library(tidyverse)
 library(here)
 library(janitor)
 library(naniar)
 library(stargazer)
 library(broom)
+library(ggsci)
 library(GGally)
+library(kableExtra)
 ```
 
 
-## Read in the data
 
-```{r}
+
+```{r, include = FALSE}
+# Read in the data
 palmetto <- read_csv(here("data", "palmetto.csv"), 
                      col_types = cols(.default = 'c')) %>% 
   mutate(across(.cols = height:green_lvs, as.numeric)) %>% 
@@ -32,21 +40,24 @@ palmetto <- read_csv(here("data", "palmetto.csv"),
 # Palmetto subset
 palmetto_sub <- palmetto %>% 
   select(species_full, species, height, length, width, green_lvs) %>% 
+  mutate(species_full = as.factor(species_full)) %>% 
   drop_na()
 
-# Checking which is which
-levels(palmetto$species_full)
+# Checking levels of each species
+levels(palmetto_sub$species_full)
 ```
 
 
 
-## Data Viz
+## Data Visualization
 
-```{r}
+```{r, include = FALSE}
 # Exploratory plots
 
 ggpairs(palmetto_sub, aes(color = species_full))
+```
 
+```{r, echo = FALSE}
 # First plot
 ggplot(palmetto_sub, aes(x = species_full, y = height)) +
   geom_jitter(color = "goldenrod4",
@@ -57,41 +68,60 @@ ggplot(palmetto_sub, aes(x = species_full, y = height)) +
                alpha = 0.9) +
   scale_fill_brewer(palette = "Set1") +
   labs(x = "Species",
-       y = "Height") +
+       y = "Height (cm)") +
   theme_classic() +
   theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
         axis.text = element_text(size = 10, color = "gray18"),
         axis.text.x = element_text(face = "italic"))
+```
 
+Figure 1: Representation of the heights of the two palmetto species (**Sabal etonia** and **Serenoa repens**) measured between 1981 and 2017 at the south-central Florida. The jitter behind the boxplots represent the actual data points, while the boxplot represents the 25% and 75% quartiles of the data. Data source: Abrahamson (2019).
+
+```{r}
 # Second plot
 ggplot(palmetto_sub, aes(x = height, y = width)) +
   geom_point(aes(color = species_full),
-             show.legend = F) +
-  labs(x = "Height",
-       y = "Width") +
-  theme_bw() +
-  theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
-        panel.grid = element_blank())
-
-# Third plot
-ggplot(palmetto_sub, aes(x = height, y = green_lvs)) +
-  geom_point(aes(color = species_full),
-             show.legend = F) +
-  labs(x = "Height",
-       y = "Length") +
+             show.legend = T,
+             alpha = 0.9,
+             size = 1.5) +
+  scale_color_startrek() +
+  labs(x = "Height (cm)",
+       y = "Width (cm)",
+       color = "Palmetto species") +
   theme_bw() +
   theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
         axis.text = element_text(size = 10, color = "gray18"),
-        panel.grid = element_blank())
+        panel.grid = element_blank(),
+        legend.position = c(.15, .85)) +
+  guides(color = guide_legend(override.aes = list(size = 6)))
 ```
 
-
-
-
-
-## Binary logistic regression
+Figure 2: Scatterplot of the height and width of specimens from both palmetto species evaluated. Points are colored per species. Data source: Abrahamson (2019).
 
 ```{r}
+# Third plot
+ggplot(palmetto_sub, aes(x = green_lvs)) +
+  geom_density(aes(fill = species_full),
+             show.legend = T,
+             alpha = 0.7) +
+  scale_fill_manual(values = c("goldenrod",
+                                "cyan4")) +
+  labs(x = "Number of green leaves",
+       y = "Density",
+       fill = "Species") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 12, color = "black", face = "bold"),
+        axis.text = element_text(size = 10, color = "gray18"),
+        panel.grid = element_blank(),
+        legend.position = c(.85, .85)) +
+  guides(color = guide_legend(override.aes = list(size = 5)))
+```
+
+Figure 3: Density plot with the number of green leaves on the x axis and their density on the y axis as a function of palmetto species. Data source: Abrahamson (2019).
+
+
+```{r, include = FALSE}
+## Binary logistic regression
 palmetto_blr <- glm(species_full ~ length + height + width + green_lvs, data = palmetto_sub, family = "binomial")
 
 palmetto_blr
@@ -99,18 +129,35 @@ palmetto_blr
 # Model outputs
 summary(palmetto_blr)
 
-palmetto_blr_tidy <- broom::tidy(palmetto_blr)
+palmetto_blr_tidy <- broom::tidy(palmetto_blr) 
+
 ```
 
-```{r, results = 'asis', echo = FALSE}
+```{r, echo = FALSE}
 # Finalized table
-stargazer(palmetto_blr, type = "html")
+palmetto_blr_tidy %>%
+  mutate(term = case_when(
+    term == "(Intercept)" ~ "Intercept",
+    term == "length" ~ "Length (cm)",
+    term == "height" ~ "Height (cm)",
+    term == "green_lvs" ~ "Green leaves",
+    term == "width" ~ "Width (cm)"
+  )) %>% 
+   kable(col.names = c("Term",
+                 "Estimate",
+                 "Standard Error",
+                 "Statistic",
+                 "p-value"),
+        caption = "<strong>Table 1: Results from the binary linear model on palmetto species.
+        Data source: Abrahamson (2019)<strong>") %>% 
+  kable_classic(bootstrap_options = "striped", full_width = F, font_size = 18) %>% 
+  row_spec(0, bold = T)
 ```
 
 
 
 
-```{r}
+```{r, include = FALSE}
 # Fitted model
 palmetto_blr_fitted <- palmetto_blr %>% 
   broom::augment(type.predict = "response")
@@ -118,22 +165,9 @@ palmetto_blr_fitted <- palmetto_blr %>%
 
 # Data viz for fitted model
 ggplot(data = palmetto_blr_fitted, aes(x = length, y = .fitted)) +
-  geom_point(aes(color = species)) +
-  geom_smooth(aes(color = species), se = FALSE) +
+  geom_point(aes(color = species_full)) +
+  geom_smooth(aes(color = species_full), se = FALSE) +
   theme_bw()
 ```
 
-```{r}
-palmetto_outcome <- palmetto_blr_fitted %>% 
-  predict(data.frame = (species))
-  mutate_if(.fitted >= 0.5)
 ```
-
-
-
-
-
-
-
-
-
