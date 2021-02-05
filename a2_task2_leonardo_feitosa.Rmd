@@ -26,7 +26,7 @@ library(kableExtra)
 
 
 
-```{r, include = FALSE}
+```{r, warning = FALSE, message = FALSE}
 # Read in the data
 palmetto <- read_csv(here("data", "palmetto.csv"), 
                      col_types = cols(.default = 'c')) %>% 
@@ -42,11 +42,12 @@ palmetto_sub <- palmetto %>%
   select(species_full, species, height, length, width, green_lvs) %>% 
   mutate(species_full = as.factor(species_full)) %>% 
   drop_na()
+```
 
+```{r, include = FALSE}
 # Checking levels of each species
 levels(palmetto_sub$species_full)
 ```
-
 
 
 ## Data Visualization
@@ -57,7 +58,7 @@ levels(palmetto_sub$species_full)
 ggpairs(palmetto_sub, aes(color = species_full))
 ```
 
-```{r, echo = FALSE}
+```{r}
 # First plot
 ggplot(palmetto_sub, aes(x = species_full, y = height)) +
   geom_jitter(color = "goldenrod4",
@@ -120,20 +121,23 @@ ggplot(palmetto_sub, aes(x = green_lvs)) +
 Figure 3: Density plot with the number of green leaves on the x axis and their density on the y axis as a function of palmetto species. Data source: Abrahamson (2019).
 
 
-```{r, include = FALSE}
+```{r, message = FALSE, warning = FALSE}
 ## Binary logistic regression
 palmetto_blr <- glm(species_full ~ length + height + width + green_lvs, data = palmetto_sub, family = "binomial")
+```
 
+```{r, include = FALSE}
+# View outputs
 palmetto_blr
 
 # Model outputs
 summary(palmetto_blr)
 
 palmetto_blr_tidy <- broom::tidy(palmetto_blr) 
-
 ```
 
-```{r, echo = FALSE}
+
+```{r}
 # Finalized table
 palmetto_blr_tidy %>%
   mutate(term = case_when(
@@ -158,7 +162,7 @@ palmetto_blr_tidy %>%
 
 
 
-```{r, include = FALSE}
+```{r, message = FALSE, warning = FALSE}
 # Fitted model
 palmetto_blr_fitted <- palmetto_blr %>% 
   broom::augment(type.predict = "response")
