@@ -144,12 +144,13 @@ palmetto_blr_tidy %>%
     term == "width" ~ "Width (cm)"
   )) %>% 
    kable(col.names = c("Term",
-                 "Estimate",
-                 "Standard Error",
-                 "Statistic",
-                 "p-value"),
+                       "Estimate",
+                       "SE",
+                       "Statistic",
+                       "p-value"),
         caption = "<strong>Table 1: Results from the binary linear model on palmetto species.
-        Data source: Abrahamson (2019)<strong>") %>% 
+        SE = Standard Error. Data source: Abrahamson (2019).<strong>",
+        align = "c") %>% 
   kable_classic(bootstrap_options = "striped", full_width = F, font_size = 18) %>% 
   row_spec(0, bold = T)
 ```
@@ -163,26 +164,57 @@ palmetto_blr_fitted <- palmetto_blr %>%
   broom::augment(type.predict = "response")
 
 # Mutate_if
-
 palmetto_blr_table <- palmetto_blr_fitted %>% 
   mutate(prediction = case_when(
-    species_full %in% c("Sabal") & .fitted >= 0.5 ~ "Sabal",
-    species_full %in% c("Serenoa") & .fitted >= 0.5 ~ "Serenoa",
-    species_full %in% c("Sabal") & .fitted < 0.5 ~ "Low",
-    species_full %in% c("Serenoa") & .fitted < 0.5 ~ "Low"
-  ))
+    species_full %in% c("Sabal") & .fitted >= 0.5 ~ "Correct",
+    species_full %in% c("Serenoa") & .fitted >= 0.5 ~ "Correct",
+    species_full %in% c("Sabal") & .fitted < 0.5 ~ "Incorrect",
+    species_full %in% c("Serenoa") & .fitted < 0.5 ~ "Incorrect"
+  )) 
 
+# Creating table with percentages
 palmetto_pctg <- palmetto_blr_table %>% 
   group_by(species_full, prediction) %>% 
-  count() %>% 
-  mutate(percentage = n/sum(n) * 100)
+  count()  %>% 
+  group_by(species_full) %>% 
+  mutate(percentage = prop.table(n) * 100) %>% 
+  mutate(percentage = round(percentage, 2))
 
-
-# Data viz for fitted model
-ggplot(data = palmetto_blr_fitted, aes(x = length, y = .fitted)) +
-  geom_point(aes(color = species_full)) +
-  geom_smooth(aes(color = species_full), se = FALSE) +
-  theme_bw()
+# Finalized table
+palmetto_pctg %>%  
+  kable(col.names = c("Species",
+                      "Predicted",
+                      "N per category",
+                      "% classified"),
+        caption = "<strong> Table 2: Binary logistic model efficacy for classifying Palmetto species. 
+        Data source: Abrahamson (2019)<strong>",
+        align = "c") %>% 
+  kable_classic(bootstrap_options = "striped", full_width = F, font_size = 18) %>% 
+  row_spec(0, bold = T)
 ```
 
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
