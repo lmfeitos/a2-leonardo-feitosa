@@ -179,7 +179,11 @@ palmetto_pctg <- palmetto_blr_table %>%
   group_by(species_full) %>% 
   mutate(percentage = prop.table(n) * 100) %>% 
   mutate(percentage = round(percentage, 2))
+```
 
+
+
+```{r}
 # Finalized table
 palmetto_pctg %>%  
   kable(col.names = c("Species",
@@ -191,10 +195,8 @@ palmetto_pctg %>%
         align = "c") %>% 
   kable_classic(bootstrap_options = "striped", full_width = F, font_size = 18) %>% 
   row_spec(0, bold = T)
+
 ```
-
-
-
 
 
 
